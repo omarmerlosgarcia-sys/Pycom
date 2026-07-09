@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Pycom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="navbar">
+    <div class="logo">PYCOM</div>
+
+    <div>
+        <a href="/">Inicio</a>
+        <a href="/crear-sala">Crear sala</a>
+        <a href="/unirse-sala">Unirse a sala</a>
+        <a class="activo" href="/registro">Registro</a>
+        <a href="/login">Login</a>
+    </div>
+</div>
+
+<main class="home-hero">
+    <div class="card home-form-card">
+        <h1>Crear cuenta</h1>
+
+        <form action="/registro" method="post">
+            <input type="text" name="nombre" placeholder="NOMBRE" required>
+            <input type="email" name="correo" placeholder="CORREO" required>
+            <input type="password" name="password" placeholder="CONTRASEÑA" required>
+
+            <button type="submit">Registrarme</button>
+        </form>
+    </div>
+</main>
+
+<footer>
+    <p>© 2024 <strong>Pycom</strong></p>
+</footer>
+
+</body>
+</html>

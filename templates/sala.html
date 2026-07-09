@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pycom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="navbar">
+
+    <div class="logo">PYCOM</div>
+
+    <div>
+        <a href="/">Inicio</a>
+        <a href="/crear-sala">Crear sala</a>
+        <a href="/unirse-sala">Unirse a sala</a>
+    </div>
+</div>
+
+<div class="sala-layout">
+
+    <div class="panel-izquierdo">
+
+        <div class="mobile-sala-top">
+            <h1>{titulo_sala}</h1>
+
+            <div class="mobile-media-tools">
+                <button type="button" class="mobile-link-btn" onclick="abrirLinkMobile()">Link</button>
+
+                <div class="mobile-link-panel" id="mobileLinkPanel">
+                    <input type="text" id="mobile-youtube-url" placeholder="">
+                    <button type="button" onclick="cargarYouTubeMobile()">Cargar</button>
+                </div>
+
+                <button type="button" onclick="document.getElementById('archivo').click()">Archivo</button>
+            </div>
+        </div>
+
+        <h2>{nombre_sala}</h2>
+
+        <div class="card sala-info-card">
+            <p>{titulo_card}</p>
+
+            {bloque_codigo}
+
+            <br><br>
+
+            {bloque_particioantes}
+        </div>
+        
+        <div class="mobile-room-info">
+            Sala: <strong id="mobileCodigoSala">{{ codigo_sala }}</strong>
+            . Participantes: <strong id="mobileParticipantes">1</strong>
+        </div>
+
+        <div class="chat-container" id="chatContainer" ondblclick="toggleChatGrande()">
+            <div class="chat-titulo">
+                Chat de la sala
+            </div>
+
+            <div class="chat-box" id="chat-box">
+                {mensajes_chat}
+            </div>
+
+            <form class="chat-form">
+                <input type="hidden" name="codigo_sala" value="{codigo_sala}">
+                <input type="hidden" id="nombre-usuario" value="{nombre_usuario}">
+                <input type="hidden" id="rol-usuario" value="{rol_usuario}">
+                <input type="text" name="mensaje" id="mensaje" placeholder="Escribe un mensaje..." autocomplete="off">
+                <button type="button" onclick="enviarMensaje()">Enviar</button>
+            </form>
+
+            <div class="upload-zone">
+                <input
+                    type="file"
+                    id="archivo"
+                    hidden
+                    onchange="subirArchivo()">
+
+                <label for="archivo" class="upload-btn">
+                    Subir archivo
+                </label>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="pantalla-contenido">
+        <div class="pantalla-box">
+
+            <div id="youtube-control">
+                <input
+                    type="text"
+                    id="youtube-url"
+                    placeholder="">
+
+                <button
+                    type="button"
+                    onclick="cargarYouTube()">
+                    Cargar video
+                </button>
+
+            </div>
+
+            <div id="youtube-player"></div>
+            <div id="archivo-player"></div>
+</div>
+
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    (c) 2024 <span>Pycom</span>. Conecta. Comparte. Disfruta.
+</footer>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+const codigoSala = document.querySelector('input[name="codigo_sala"]').value;
+const nombreUsuario = document.getElementById("nombre-usuario").value;
+const rolUsuario = document.getElementById("rol-usuario").value;
+
+document.body.classList.add("rol-" + rolUsuario);
+
+const esCreador = rolUsuario === "creador";
+const esInvitado = rolUsuario === "invitado";
+
+const protocoloWS = window.location.protocol === "https:" ? "wss://" : "ws://";
+const socket = new WebSocket(
+    protocoloWS + window.location.host + "/ws/" + codigoSala +
+    "?nombre=" + encodeURIComponent(nombreUsuario) + 
+    "&rol=" + encodeURIComponent(rolUsuario)
+);
+
+const youtubeControl = document.getElementById("youtube-control");
+
+if (esInvitado) {
+    youtubeControl.style.display = "none";
+}
+
+let player;
+let playerListo = false;
+let videoPendiente = null;
+let estadoPendiente = null;
+let ignorarEvento = false;
+let ultimoTiempo = 0;
+
+function limpiarTexto(texto) {
+    const div = document.createElement("div");
+    div.innerText = texto;
+    return div.innerHTML;
+}
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player("youtube-player", {
+        width: "100%",
+        height: "500",
+        videoId: "",
+        playerVars: {
+            rel: 0,
+            controls: 1
+        },
+        events: {
+            "onReady": function() {
+                playerListo = true;
+
+                if (videoPendiente) {
+                    cargarVideoEnPlayer(videoPendiente);
+                    videoPendiente = null;
+                }
+
+                if (estadoPendiente) {
+                    aplicarEstado(estadoPendiente);
+                    estadoPendiente = null;
+                }
+            },
+            "onStateChange": manejarEstadoYouTube
+        }
+    });
+}
+
+socket.onopen = function() {
+    console.log("WebSocket conectado");
+};
+
+socket.onerror = function() {
+    alert("Error en WebSocket");
+};
+
+socket.onclose = function() {
+    console.log("WebSocket cerrado");
+
+    setTimeout(function() {
+        reconectarSocket();
+    }, 1000);
+};
+
+socket.onmessage = function(event) {
+    let data;
+
+    try {
+        data = JSON.parse(event.data);
+    } catch {
+        agregarChat({
+            nombre: "Sistema",
+            texto: event.data
+        });
+        return;
+    }
+
+    if (data.tipo === "STATE") {
+        aplicarEstado(data.estado);
+        return;
+    }
+
+    if (data.tipo === "PARTICIPANTES") {
+        actualizarParticipantes(data.usuarios);
+        return;
+    }
+
+    if (data.tipo === "CHAT") {
+        agregarChat(data);
+        return;
+    }
+
+    if (data.tipo === "ARCHIVO") {
+        mostrarArchivoEnPantalla(data);
+        return;
+    }
+
+    if (data.tipo === "VIDEO") {
+        console.log("VIDEO RECIBIDO:", data.videoId);
+        recibirVideo(data.videoId);
+        return;
+    }
+
+    if (data.tipo === "PLAY") {
+        recibirPlay(data.tiempo);
+        return;
+    }
+
+    if (data.tipo === "PAUSE") {
+        recibirPause(data.tiempo);
+        return;
+    }
+
+    if (data.tipo === "SEEK") {
+        recibirSeek(data.tiempo);
+        return;
+    }
+};
+
+function enviarMensaje() {
+    const input = document.getElementById("mensaje");
+
+    if (input.value.trim() !== "") {
+
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            alert("Chat no conectado todavia");
+            return;
+        }
+
+        socket.send(JSON.stringify({
+            tipo: "CHAT",
+            nombre: nombreUsuario,
+            texto: input.value
+        }));
+
+        input.value = "";
+    }
+}
+
+function agregarChat(data) {
+    const chatBox = document.getElementById("chat-box");
+
+    const nombre = data.nombre || "Usuario";
+    const texto = data.texto || "";
+    const clase = nombre === nombreUsuario ? "propio" : "otro";
+
+    chatBox.innerHTML += `
+        <div class="mensaje ${clase}">
+            <div class="burbuja">
+                <div class="mensaje-nombre">${limpiarTexto(nombre)}</div>
+                <div>${limpiarTexto(texto)}</div>
+            </div>
+        </div>
+    `;
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function agregarArchivoChat(data) {
+    const chatBox = document.getElementById("chat-box");
+
+    const nombre = data.nombre || "Usuario";
+    const clase = nombre === nombreUsuario ? "propio" : "otro";
+    const nombreArchivo = data.nombreArchivo || "Archivo";
+    const url = data.url || "";
+    const tipoArchivo = data.tipoArchivo || "";
+
+    let contenido = `<a href="${url}" target="_blank">📎 ${limpiarTexto(nombreArchivo)}</a>`;
+
+    if (tipoArchivo.startsWith("image/")) {
+        contenido = `<img class="archivo-imagen" src="${url}" alt="archivo">`;
+    }
+
+    if (tipoArchivo.startsWith("video/")) {
+        contenido = `<video class="archivo-video" src="${url}" controls></video>`;
+    }
+
+    chatBox.innerHTML += `
+        <div class="mensaje ${clase}">
+            <div class="burbuja">
+                <div class="mensaje-nombre">${limpiarTexto(nombre)}</div>
+                <div>${contenido}</div>
+            </div>
+        </div>
+    `;
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function mostrarArchivoEnPantalla(data) {
+    const youtubePlayer = document.getElementById("youtube-player");
+    const archivoPlayer = document.getElementById("archivo-player");
+
+    const url = data.url || "";
+    const tipoArchivo = data.tipoArchivo || "";
+
+    youtubePlayer.style.display = "none";
+    archivoPlayer.style.display = "flex";
+
+    if (tipoArchivo.startsWith("image/")) {
+        archivoPlayer.innerHTML = `
+            <img class="archivo-pantalla-imagen" src="${url}" alt="imagen subida">
+        `;
+    } else if (tipoArchivo.startsWith("video/")) {
+        archivoPlayer.innerHTML = `
+            <video class="archivo-pantalla-video" src="${url}" controls autoplay></video>
+        `;
+    } else {
+        archivoPlayer.innerHTML = `
+            <a class="archivo-pantalla-link" href="${url}" target="_blank">
+                Abrir archivo
+            </a>
+        `;
+    }
+}
+
+async function subirArchivo() {
+    const inputArchivo = document.getElementById("archivo");
+
+    if (!inputArchivo.files.length) {
+        alert("Elige un archivo primero");
+        return;
+    }
+
+    const archivo = inputArchivo.files[0];
+    const formData = new FormData();
+    formData.append("archivo", archivo);
+
+    const respuesta = await fetch("/subir-archivo", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await respuesta.json();
+
+    if (!data.ok) {
+        alert("No se pudo subir el archivo");
+        return;
+    }
+
+    socket.send(JSON.stringify({
+        tipo: "ARCHIVO",
+        nombre: nombreUsuario,
+        nombreArchivo: data.nombre,
+        url: data.url,
+        tipoArchivo: data.tipo
+    }));
+
+    inputArchivo.value = "";
+}
+
+function actualizarParticipantes(usuarios) {
+    const contador = document.getElementById("contador-participantes");
+    const lista = document.getElementById("lista-participantes");
+
+    if (contador) {
+        contador.innerText = "Participantes: " + usuarios.length;
+    }
+
+    if (lista) {
+        lista.innerHTML = "";
+        usuarios.forEach(function(usuario) {
+            lista.innerHTML += "<p>🟢 " + limpiarTexto(usuario) + "</p>";
+        });
+    }
+}
+
+function obtenerIdYouTube(url) {
+    let videoId = "";
+
+    if (url.includes("youtu.be/")) {
+        videoId = url.split("youtu.be/")[1].split("?")[0];
+    } else if (url.includes("v=")) {
+        videoId = url.split("v=")[1].split("&")[0];
+    }
+
+    return videoId;
+}
+
+function esLinkTikTok(url) {
+    return url.includes("tiktok.com");
+}
+
+function cargarTikTok(url) {
+    const archivoPlayer = document.getElementById("archivo-player");
+    const youtubePlayer = document.getElementById("youtube-player");
+
+    youtubePlayer.style.display = "none";
+    archivoPlayer.style.display = "flex";
+
+    archivoPlayer.innerHTML = `
+        <iframe
+            src="https://www.tiktok.com/embed/v2/${url.split('/video/')[1].split('?')[0]}"
+            style="width:100%; height:100%; border:none; border-radius:18px;"
+            allow="fullscreen"
+            allowfullscreen>
+        </iframe>
+    `;
+}
+
+function cargarYouTube() {
+    const url = document.getElementById("youtube-url").value;
+
+    if (esLinkTikTok(url)) {
+        cargarTikTok(url);
+        return;
+    }
+
+    const videoId = obtenerIdYouTube(url);
+
+    if (!videoId) {
+        alert("Pega un enlace válido de YouTube");
+        return;
+    }
+    
+    document.getElementById("archivo-player").style.display = "none";
+    document.getElementById("archivo-player").innerHTML = "";
+    document.getElementById("youtube-player").style.display = "block";
+
+    cargarVideoEnPlayer(videoId);
+
+    socket.send(JSON.stringify({
+        tipo: "VIDEO",
+        videoId: videoId
+    }));
+}
+
+function cargarVideoEnPlayer(videoId) {
+    const archivoPlayer = document.getElementById("archivo-player");
+    const youtubePlayer = document.getElementById("youtube-player");
+
+    archivoPlayer.style.display = "none";
+    archivoPlayer.innerHTML = "";
+
+    youtubePlayer.style.display = "block";
+    youtubePlayer.style.width = "100%";
+    youtubePlayer.style.height = "100%";
+
+    if (!playerListo || !player) {
+        videoPendiente = videoId;
+        return;
+    }
+
+    ignorarEvento = true;
+    player.loadVideoById(videoId);
+
+    setTimeout(function() {
+        ignorarEvento = false;
+    }, 1200);
+}
+
+function recibirVideo(videoId) {
+    const archivoPlayer = document.getElementById("archivo-player");
+    const youtubePlayer = document.getElementById("youtube-player");
+
+    archivoPlayer.style.display = "none";
+    archivoPlayer.innerHTML = "";
+
+    youtubePlayer.style.display = "block";
+    youtubePlayer.style.width = "100%";
+    youtubePlayer.style.height = "100%";
+
+    videoPendiente = videoId;
+
+    setTimeout(function() {
+        cargarVideoEnPlayer(videoId);
+    }, 500);
+}
+
+function manejarEstadoYouTube(event) {
+    if (ignorarEvento) {
+        return;
+    }
+
+    if (!player || !player.getCurrentTime) {
+        return;
+    }
+
+    const tiempo = Math.floor(player.getCurrentTime());
+
+    if (event.data === YT.PlayerState.BUFFERING) {
+        socket.send(JSON.stringify({
+            tipo: "PLAY",
+            tiempo: tiempo
+        }));
+    }
+
+    if (event.data === YT.PlayerState.PAUSED && !ignorarEvento) {
+        socket.send(JSON.stringify({
+            tipo: "PAUSE",
+            tiempo: tiempo
+        }));
+    }
+}
+
+function recibirPlay(tiempo) {
+    if (!playerListo || !player) return;
+
+    ignorarEvento = true;
+
+    player.seekTo(tiempo, true);
+
+    setTimeout(function() {
+        player.playVideo();
+        ignorarEvento = false;
+    }, 300);
+}
+
+function recibirPause(tiempo) {
+    if (!playerListo || !player) return;
+
+    ignorarEvento = true;
+    player.seekTo(tiempo, true);
+    player.pauseVideo();
+
+    setTimeout(function() {
+        ignorarEvento = false;
+    }, 1000);
+}
+
+function recibirSeek(tiempo) {
+    if (!playerListo || !player) return;
+
+    ignorarEvento = true;
+    player.seekTo(tiempo, true);
+
+    setTimeout(function() {
+        ignorarEvento = false;
+    }, 1000);
+}
+
+function aplicarEstado(estado) {
+    if (!playerListo || !player) {
+        estadoPendiente = estado;
+        return;
+    }
+
+    if (!estado.videoId) {
+        return;
+    }
+
+    ignorarEvento = true;
+
+    player.loadVideoById(estado.videoId);
+
+    setTimeout(function() {
+        player.seekTo(estado.tiempo, true);
+
+        if (estado.reproduciendo) {
+            player.playVideo();
+        } else {
+            player.pauseVideo();
+        }
+
+        ignorarEvento = false;
+    }, 1200);
+}
+
+setInterval(function() {
+    if (!esCreador || ignorarEvento || !playerListo || !player || !player.getCurrentTime) {
+        return;
+    }
+
+    const tiempo = Math.floor(player.getCurrentTime());
+    ultimoTiempo = tiempo;
+}, 2000);
+
+function copiarCodigoSala() {
+    const codigo = document.getElementById("codigoSala").innerText.trim();
+
+    const inputTemporal = document.createElement("input");
+    inputTemporal.value = codigo;
+    document.body.appendChild(inputTemporal);
+
+    inputTemporal.select();
+    inputTemporal.setSelectionRange(0, 99999);
+
+    document.execCommand("copy");
+
+    document.body.removeChild(inputTemporal);
+
+    alert("Código copiado");
+}
+
+function toggleChatGrande() {
+    const chat = document.getElementById("chatContainer");
+
+    if (!chat) return;
+
+    chat.classList.toggle("chat-grande");
+}
+
+function abrirLinkMobile() {
+    const panel = document.getElementById("mobileLinkPanel");
+    const input = document.getElementById("mobile-youtube-url");
+
+    if (!panel) return;
+
+    panel.classList.toggle("activo");
+
+    if (panel.classList.contains("activo") && input) {
+        setTimeout(function() {
+            input.focus();
+        }, 150);
+    }
+}
+
+function cargarYouTubeMobile() {
+    const inputMobile = document.getElementById("mobile-youtube-url");
+    const inputNormal = document.getElementById("youtube-url");
+
+    if (!inputMobile || !inputNormal) return;
+
+    inputNormal.value = inputMobile.value;
+    cargarYouTube();
+
+    const panel = document.getElementById("mobileLinkPanel");
+    if (panel) {
+        panel.classList.remove("activo");
+    }
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar perfil - Pycom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="logo">PYCOM</div>
+
+    <div class="nav-links">
+        <a href="/">Inicio</a>
+        <a href="/crear-sala">Crear sala</a>
+        <a href="/unirse-sala">Unirse a sala</a>
+        <a href="/perfil">Perfil</a>
+    </div>
+</nav>
+
+<main class="home-hero editar-page">
+
+    <div class="card home-form-card">
+
+        <h1>Editar perfil</h1>
+
+        <form action="/cambiar-foto" method="post" enctype="multipart/form-data">
+
+            <input id="foto" type="file" name="foto" accept="image/*" required hidden onchange="this.form.submit()">
+
+            <label for="foto" class="file-label">
+                Seleccionar foto
+            </label>
+
+        </form>
+
+        <form action="/editar-perfil" method="post">
+
+           <input type="text" name="nuevo_nombre" placeholder="Nuevo nombre">
+
+           <input type="email" name="nuevo_correo" placeholder="Nuevo correo">
+
+           <input type="password" name="nueva_password" placeholder="Nueva contraseña">
+
+           <input type="password" name="confirmar_password" placeholder="Confirmar contraseña">
+
+           <button type="submit">
+               Guardar cambios
+           </button>
+
+        </form>
+
+        <hr style="margin:35px 0; border-color:#2a2a2a;">
+
+        <h2>Publicar video</h2>
+
+        <form action="/publicar-video" method="post" enctype="multipart/form-data">
+
+            <input
+                type="text"
+                name="titulo"
+                placeholder="Título del video"
+                required
+            >
+
+            <input
+                id="video"
+                type="file"
+                name="video"
+                accept="video/*"
+                required
+                hidden
+>
+
+            <label for="video" class="file-label">
+                   Seleccionar video
+            </label>
+
+            <button type="submit">
+                Publicar en Pycom
+            </button>
+
+        </form>
+
+        <a href="/perfil">
+            <button type="button">
+                Volver
+            </button>
+        </a>
+
+    </div>
+
+</main>
+
+<footer>
+    © 2024 Pycom
+</footer>
+
+</body>
+</html>

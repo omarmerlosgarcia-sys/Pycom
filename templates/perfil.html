@@ -1,0 +1,63 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - Pycom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="navbar">
+    <div class="logo">PYCOM</div>
+
+    <div>
+        <a href="/">Inicio</a>
+        <a href="/crear-sala">Crear sala</a>
+        <a href="/unirse-sala">Unirse a sala</a>
+        <a class="activo" href="/perfil">Perfil</a>
+        <a href="/logout">Salir</a>
+    </div>
+</div>
+
+<main class="home-hero perfil-page">
+    <div class="card home-form-card perfil-card">
+
+        <div class="perfil-foto">
+            <img src="/static/uploads/{{foto}}" alt="">
+        </div>
+        <h1>{{nombre}}</h1>
+
+        <p style="color: #4dff73; font-weight: 700;">En línea</p>
+
+        <p>Bienvenido a tu perfil de Pycom.</p>
+
+        <a href="/editar-perfil">
+            <button>Editar perfil</button>
+        </a>
+
+        <a href="/crear-sala">
+            <button>Crear sala</button>
+        </a>
+
+        <a href="/unirse-sala">
+            <button>Unirse a sala</button>
+        </a>
+
+        <a href="/logout">
+            <button>Cerrar sesión</button>
+        </a>
+        
+        <a href="/historial">
+            <button>Historial</button>
+        </a>
+
+    </div>
+</main>
+
+<footer>
+    <p>© 2024 <strong>Pycom</strong></p>
+</footer>
+
+</body>
+</html>

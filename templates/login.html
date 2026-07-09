@@ -1,0 +1,55 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Pycom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="navbar">
+
+    <div class="logo">PYCOM</div>
+
+    <div>
+        <a href="/">Inicio</a>
+        <a href="/crear-sala">Crear sala</a>
+        <a href="/unirse-sala">Unirse a sala</a>
+        <a href="/registro">Registro</a>
+        <a class="activo" href="/login">Login</a>
+    </div>
+
+</div>
+
+<main class="home-hero">
+
+<div class="card home-form-card">
+
+<h1>Iniciar sesión</h1>
+
+<form action="/login" method="post">
+
+<input type="email" name="correo" placeholder="CORREO" required>
+
+<input type="password" name="password" placeholder="CONTRASEÑA" required>
+
+<button type="submit">
+Entrar
+</button>
+
+</form>
+
+</div>
+
+</main>
+
+<footer>
+
+<p>© 2024 <strong>Pycom</strong></p>
+
+</footer>
+
+</body>
+</html>
+

@@ -1,0 +1,49 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial - Pycom</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="navbar">
+    <div class="logo">PYCOM</div>
+
+    <div>
+        <a href="/perfil">Perfil</a>
+        <a href="/logout">Salir</a>
+    </div>
+</div>
+
+<main class="home-hero historial-page">
+    <div class="card home-form-card historial-card">
+
+        <h1>Historial</h1>
+
+        <div class="historial">
+            {{historial}}
+        </div>
+
+        <br><br>
+
+        <form action="/borrar-historial" method="post">
+            <button type="submit">Borrar historial</button>
+        </form>
+
+        <br>
+
+        <a href="/perfil">
+            <button>Volver</button>
+        </a>
+
+    </div>
+</main>
+
+<footer>
+    <p>© 2024 <strong>Pycom</strong></p>
+</footer>
+
+</body>
+</html>

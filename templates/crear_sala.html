@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pycom</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="navbar">
+
+    <div class="logo">PYCOM</div>
+
+    <div>
+        <a href="/">Inicio</a>
+        <a class="activo" href="/crear-sala">Crear sala</a>
+        <a href="/unirse-sala">Unirse a sala</a>
+    </div>
+
+</div>
+
+<main class="home-hero">
+
+    <div class="card home-form-card">
+
+        <h1>Crear sala</h1>
+
+        <form action="/crear-sala" method="post">
+
+            <input
+                type="text"
+                name="nombre_sala"
+                placeholder="NOMBRE"
+                autocomplete="off"
+                required>
+
+            <button type="submit">
+                Crear
+            </button>
+
+        </form>
+
+    </div>
+
+</main>
+
+<footer>
+    © 2024 <span>Pycom</span>
+</footer>
+
+</body>
+
+</html>
