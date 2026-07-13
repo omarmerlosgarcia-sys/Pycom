@@ -131,11 +131,10 @@ const esCreador = rolUsuario === "creador";
 const esInvitado = rolUsuario === "invitado";
 
 const protocoloWS = window.location.protocol === "https:" ? "wss://" : "ws://";
-const socket = new WebSocket(
-    protocoloWS + window.location.host + "/ws/" + codigoSala +
-    "?nombre=" + encodeURIComponent(nombreUsuario) + 
-    "&rol=" + encodeURIComponent(rolUsuario)
-);
+
+let socket = null;
+let temporizadorReconexion = null;
+let intentandoReconexion = false;
 
 const youtubeControl = document.getElementById("youtube-control");
 
@@ -184,76 +183,134 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-socket.onopen = function() {
-    console.log("WebSocket conectado");
-};
-
-socket.onerror = function() {
-    alert("Error en WebSocket");
-};
-
-socket.onclose = function() {
-    console.log("WebSocket cerrado");
-
-    setTimeout(function() {
-        reconectarSocket();
-    }, 1000);
-};
-
-socket.onmessage = function(event) {
-    let data;
-
-    try {
-        data = JSON.parse(event.data);
-    } catch {
-        agregarChat({
-            nombre: "Sistema",
-            texto: event.data
-        });
+function conectarSocket() {
+    if (
+        socket &&
+        (
+            socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING
+        )
+    ) {
         return;
     }
 
-    if (data.tipo === "STATE") {
-        aplicarEstado(data.estado);
-        return;
-    }
+    intentandoReconectar = true;
 
-    if (data.tipo === "PARTICIPANTES") {
-        actualizarParticipantes(data.usuarios);
-        return;
-    }
+    socket = new WebSocket(
+        protocoloWS + window.location.host + "/ws/" + codigoSala +
+        "?nombre=" + encodeURIComponent(nombreUsuario) +
+        "&rol=" + encodeURIComponent(rolUsuario)
+    );
 
-    if (data.tipo === "CHAT") {
-        agregarChat(data);
-        return;
-    }
+    socket.onopen = function() {
+        console.log("WebSocket conectado");
 
-    if (data.tipo === "ARCHIVO") {
-        mostrarArchivoEnPantalla(data);
-        return;
-    }
+        intentandoReconectar = false;
 
-    if (data.tipo === "VIDEO") {
-        console.log("VIDEO RECIBIDO:", data.videoId);
-        recibirVideo(data.videoId);
-        return;
-    }
+        if (temporizadorReconexion) {
+            clearTimeout(temporizadorReconexion);
+            temporizadorReconexion = null;
+        }
+    };
 
-    if (data.tipo === "PLAY") {
-        recibirPlay(data.tiempo);
-        return;
-    }
+    socket.onerror = function(error) {
+        console.log("Error temporal de WebSocket:", error);
+    };
 
-    if (data.tipo === "PAUSE") {
-        recibirPause(data.tiempo);
-        return;
-    }
+    socket.onclose = function() {
+        console.log("WebSocket cerrado. Intentando reconectar...");
 
-    if (data.tipo === "SEEK") {
-        recibirSeek(data.tiempo);
-        return;
+        intentandoReconectar = false;
+
+        if (temporizadorReconexion) {
+            clearTimeout(temporizadorReconexion);
+        }
+
+        temporizadorReconexion = setTimeout(function() {
+            conectarSocket();
+        }, 1500);
+    };
+
+    socket.onmessage = function(event) {
+        let data;
+
+        try {
+            data = JSON.parse(event.data);
+        } catch {
+            agregarChat({
+                nombre: "Sistema",
+                texto: event.data
+            });
+            return;
+        }
+
+        if (data.tipo === "STATE") {
+            aplicarEstado(data.estado);
+            return;
+        }
+
+        if (data.tipo === "PARTICIPANTES") {
+            actualizarParticipantes(data.usuarios);
+            return;
+        }
+
+        if (data.tipo === "CHAT") {
+            agregarChat(data);
+            return;
+        }
+
+        if (data.tipo === "ARCHIVO") {
+            mostrarArchivoEnPantalla(data);
+            return;
+        }
+
+        if (data.tipo === "VIDEO") {
+            console.log("VIDEO RECIBIDO:", data.videoId);
+            recibirVideo(data.videoId);
+            return;
+        }
+
+        if (data.tipo === "PLAY") {
+            recibirPlay(data.tiempo);
+            return;
+        }
+
+        if (data.tipo === "PAUSE") {
+            recibirPause(data.tiempo);
+            return;
+        }
+
+        if (data.tipo === "SEEK") {
+            recibirSeek(data.tiempo);
+            return;
+        }
+    };
+}
+
+function socketDisponible() {
+    return socket && socket.readyState === WebSocket.OPEN;
+}
+
+conectarSocket();
+
+document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === "visible" && !socketDisponible()) {
+        conectarSocket();
     }
-};
+});
+
+window.addEventListener("pageshow", function() {
+    if (!socketDisponible()) {
+        conectarSocket();
+    }
+});
+
+window.addEventListener("online", function() {
+    if (!socketDisponible()) {
+        conectarSocket();
+    }
+});
+    
 
 function enviarMensaje() {
     const input = document.getElementById("mensaje");

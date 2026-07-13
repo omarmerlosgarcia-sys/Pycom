@@ -242,7 +242,16 @@ def guardar_sala(request: Request, nombre_sala: str = Form(...), nombre_usuario:
     conexion.commit()
     conexion.close()
 
-    return render_sala(codigo_sala, "Sala creada", nombre_usuario, "creador")
+    request.session["sala_actual"] = {
+        "codigo": codigo_sala,
+        "nombre": nombre_usuario,
+        "rol": "creador"
+    }
+
+    return RedirectResponse(
+        url=f"/sala/{codigo_sala}",
+        status_code=303
+    )
 
 
 @app.get("/unirse-sala", response_class=HTMLResponse)
@@ -293,8 +302,48 @@ def entrar_sala(request: Request, codigo_sala: str = Form(...), nombre_usuario: 
     conexion.commit()
     conexion.close()
 
-    return render_sala(codigo_sala, "Te uniste a la sala", nombre_usuario, "invitado")
+    request.session["sala_actual"] = {
+        "codigo": codigo_sala,
+        "nombre": nombre_usuario,
+        "rol": "invitado"
+    }
 
+    return RedirectResponse(
+        url=f"/sala/{codigo_sala}",
+        status_code=303
+    )
+
+@app.get("/sala/{codigo_sala}", response_class=HTMLResponse)
+def ver_sala(request: Request, codigo_sala: str):
+    codigo_sala = codigo_sala.upper()
+
+    if codigo_sala not in salas:
+        return RedirectResponse(
+            url="/unirse-sala",
+            status_code=303
+        )
+
+    acceso = request.session.get("sala_actual")
+
+    if not acceso or acceso.get("codigo") != codigo_sala:
+        return RedirectResponse(
+            url="/unirse-sala",
+            status_code=303
+        )
+
+    nombre_usuario = acceso.get("nombre", "Usuario")
+    rol = acceso.get("rol", "invitado")
+
+    titulo = "Sala creada" if rol == "creador" else "Te uniste a la sala"
+
+    return HTMLResponse(
+        render_sala(
+            codigo_sala,
+            titulo,
+            nombre_usuario,
+            rol
+        )
+    )
 
 @app.get("/registro")
 def ver_registro():
