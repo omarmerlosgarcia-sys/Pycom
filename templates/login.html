@@ -8,6 +8,10 @@
 
 <body>
 
+    <div id="intro-screen">
+        <div class="intro-logo">P</div>
+    </div>
+
 <div class="navbar">
 
     <div class="logo">PYCOM</div>
@@ -49,6 +53,22 @@ Entrar
 <p>© 2024 <strong>Pycom</strong></p>
 
 </footer>
+
+<script>
+    window.addEventListener("load", () => {
+        const intro = document.getElementById("intro-screen");
+
+        setTimeout(() => {
+            intro.classList.add("hide");
+
+            setTimeout(() => {
+                intro.remove();
+            }, 800);
+
+        }, 2200);
+    });
+    </script>
+
 
 </body>
 </html>
