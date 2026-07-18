@@ -1693,9 +1693,12 @@ input:-webkit-autofill:focus {
     position:fixed;
     inset:0;
     background:#000;
+
     display:flex;
+    flex-direction: column;
     justify-content:center;
     align-items:center;
+    
     z-index:99999;
     transition:opacity .8s ease;
 }
@@ -1706,22 +1709,113 @@ input:-webkit-autofill:focus {
 }
 
 .intro-logo{
-    font-size: 180px;
+    position: relative;
+
+    font-size: 92px;
     font-weight: 900;
     font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: 4px;
 
-    color: #ffffff;
-
-    -webkit-text-stroke: 3px #1db954;
+    color:#63ff6e;
 
     text-shadow:
-        3px 3px 0 #1db954,
-        -3px -3px 0 #1db954,
-        0 0 12px rgba(29, 185, 84, 0.8),
-        0 0 30px rgba(29, 185, 84, 0.45);
+        0 0 12px rgba(29,185,84,.7),
+        0 0 40px rgba(29,185,84,.35);
 
-    user-select: none;
-    animation: introAppear .9s ease;
+    user-select:none;
+}
+
+.intro-subtitle{
+    margin-top:18px;
+
+    color:rgba(255,255,255,.45);
+
+    font-size:15px;
+
+    letter-spacing:8px;
+
+    text-transform:uppercase;
+
+    user-select:none;
+}
+
+.intro-logo::before{
+    content:"";
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:520px;
+    height:320px;
+
+    background:radial-gradient(
+        circle,
+        rgba(29,185,84,.28) 0%,
+        rgba(29,185,84,.12) 35%,
+        transparent 75%
+    );
+
+    filter:blur(45px);
+
+    z-index:-1;
+}
+
+.intro-logo::before{
+    content:"";
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:650px;
+    height:350px;
+
+    background:radial-gradient(circle,
+        rgba(29,185,84,.35) 0%,
+        rgba(29,185,84,.12) 45%,
+        transparent 80%);
+
+    filter:blur(40px);
+
+    z-index:-1;
+}
+
+.intro-subtitle{
+    margin-top:22px;
+
+    color:#67ff82;
+
+    font-size:18px;
+
+    letter-spacing:8px;
+
+    opacity:.75;
+}
+
+@keyframes introAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0.75);
+        filter: blur(6px);
+    }
+
+    70% {
+        opacity: 1;
+        transform: scale(1.04);
+        filter: blur(0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 @keyframes introAppear{
